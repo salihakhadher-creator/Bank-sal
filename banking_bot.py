@@ -5,36 +5,42 @@ A conversational banking assistant powered by Mistral's largest model
 
 import streamlit as st
 from mistralai import Mistral
+from config import (
+    MISTRAL_API_KEY,
+    MISTRAL_MODEL,
+    MISTRAL_MAX_TOKENS,
+    MISTRAL_TEMPERATURE,
+    BANKING_SYSTEM_PROMPT,
+    APP_TITLE,
+    APP_PAGE_TITLE,
+    APP_ICON,
+    APP_LAYOUT,
+    CHAT_INPUT_PLACEHOLDER,
+    validate_config
+)
+
+# Validate configuration
+try:
+    validate_config()
+except ValueError as e:
+    st.error(f"Configuration Error: {str(e)}")
+    st.stop()
 
 # Initialize Streamlit page config
 st.set_page_config(
-    page_title="Banking Bot",
-    page_icon="🏦",
-    layout="wide"
+    page_title=APP_PAGE_TITLE,
+    page_icon=APP_ICON,
+    layout=APP_LAYOUT
 )
 
 # Title
-st.title("🏦 Banking Bot Assistant")
+st.title(APP_TITLE)
 st.markdown("---")
 
 # Initialize Mistral client
 @st.cache_resource
 def get_mistral_client():
-    return Mistral(api_key="3CCVJBzyN6vp93lqdrIxBX1OZavAPpal")
-
-# System prompt for banking bot
-BANKING_SYSTEM_PROMPT = """You are an expert banking assistant chatbot. You help customers with:
-- Account information and balances
-- Transaction history
-- Money transfers
-- Loan information
-- Credit card services
-- Investment advice
-- Banking fees and charges
-- Customer service issues
-
-Be professional, helpful, and provide clear explanations. Always prioritize customer security and privacy.
-If you don't have specific information, ask clarifying questions or recommend contacting the bank directly for sensitive matters."""
+    return Mistral(api_key=MISTRAL_API_KEY)
 
 # Initialize session state
 if "messages" not in st.session_state:
@@ -46,7 +52,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # User input
-user_input = st.chat_input("Ask me about banking services...")
+user_input = st.chat_input(CHAT_INPUT_PLACEHOLDER)
 
 if user_input:
     # Add user message to history
@@ -84,10 +90,10 @@ if user_input:
             try:
                 # Call Mistral API
                 response = client.chat.complete(
-                    model="mistral-large-latest",
+                    model=MISTRAL_MODEL,
                     messages=messages,
-                    max_tokens=1000,
-                    temperature=0.7
+                    max_tokens=MISTRAL_MAX_TOKENS,
+                    temperature=MISTRAL_TEMPERATURE
                 )
                 
                 assistant_message = response.choices[0].message.content
@@ -105,8 +111,8 @@ if user_input:
 # Sidebar with additional features
 with st.sidebar:
     st.markdown("### 📚 About This Bot")
-    st.markdown("""
-    This banking bot uses **Mistral-Large-Latest** to provide:
+    st.markdown(f"""
+    This banking bot uses **{MISTRAL_MODEL}** to provide:
     - 24/7 Customer Support
     - Banking Information
     - Account Assistance
