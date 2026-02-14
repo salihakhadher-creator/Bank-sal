@@ -1,137 +1,96 @@
-"""
-Banking Bot using Mistral AI
-A conversational banking assistant powered by Mistral's largest model
-"""
-
 import streamlit as st
 from mistralai import Mistral
-from config import (
-    MISTRAL_API_KEY,
-    MISTRAL_MODEL,
-    MISTRAL_MAX_TOKENS,
-    MISTRAL_TEMPERATURE,
-    BANKING_SYSTEM_PROMPT,
-    APP_TITLE,
-    APP_PAGE_TITLE,
-    APP_ICON,
-    APP_LAYOUT,
-    CHAT_INPUT_PLACEHOLDER,
-    validate_config
-)
-
-# Validate configuration
-try:
-    validate_config()
-except ValueError as e:
-    st.error(f"Configuration Error: {str(e)}")
-    st.stop()
 
 # Initialize Streamlit page config
-st.set_page_config(
-    page_title=APP_PAGE_TITLE,
-    page_icon=APP_ICON,
-    layout=APP_LAYOUT
-)
+st.set_page_config(page_title="Banking Bot", layout="wide")
 
-# Title
-st.title(APP_TITLE)
+# Initialize Mistral client with API key
+api_key = "3CCVJBzyN6vp93lqdrIxBX1OZavAPpal"
+client = Mistral(api_key=api_key)
+
+# App title and description
+st.title("🏦 Banking Bot")
 st.markdown("---")
+st.write("Welcome to the Banking Bot! Ask me anything about banking services, account management, loans, and more.")
 
-# Initialize Mistral client
-@st.cache_resource
-def get_mistral_client():
-    return Mistral(api_key=MISTRAL_API_KEY)
-
-# Initialize session state
+# Initialize chat history in session state
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state.messages = [
+        {
+            "role": "assistant",
+            "content": "Hello! I'm your banking assistant. How can I help you today? I can help with account inquiries, transaction information, loan details, credit card services, and general banking questions."
+        }
+    ]
 
 # Display chat history
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.write(msg["content"])
 
 # User input
-user_input = st.chat_input(CHAT_INPUT_PLACEHOLDER)
-
-if user_input:
+if user_input := st.chat_input("Type your banking question here..."):
     # Add user message to history
     st.session_state.messages.append({"role": "user", "content": user_input})
     
+    # Display user message
     with st.chat_message("user"):
-        st.markdown(user_input)
+        st.write(user_input)
     
     # Get response from Mistral
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            client = get_mistral_client()
-            
-            # Prepare messages for API
-            messages = [
-                {
-                    "role": "system",
-                    "content": BANKING_SYSTEM_PROMPT
-                }
-            ]
-            
-            # Add conversation history
-            for msg in st.session_state.messages[:-1]:  # Exclude the current user message we just added
-                messages.append({
-                    "role": msg["role"],
-                    "content": msg["content"]
-                })
-            
-            # Add the current user message
-            messages.append({
-                "role": "user",
-                "content": user_input
-            })
-            
-            try:
-                # Call Mistral API
-                response = client.chat.complete(
-                    model=MISTRAL_MODEL,
-                    messages=messages,
-                    max_tokens=MISTRAL_MAX_TOKENS,
-                    temperature=MISTRAL_TEMPERATURE
-                )
-                
-                assistant_message = response.choices[0].message.content
-                st.markdown(assistant_message)
-                
-                # Add assistant message to history
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": assistant_message
-                })
-                
-            except Exception as e:
-                st.error(f"Error communicating with Mistral AI: {str(e)}")
+    try:
+        # Prepare system message for banking context
+        system_message = """You are a professional banking assistant with expertise in:
+- Account management and services
+- Online banking and digital payments
+- Loans and credit products
+- Investment and savings options
+- Credit cards and debit cards
+- Transaction assistance
+- Banking security and fraud prevention
 
-# Sidebar with additional features
-with st.sidebar:
-    st.markdown("### 📚 About This Bot")
-    st.markdown(f"""
-    This banking bot uses **{MISTRAL_MODEL}** to provide:
-    - 24/7 Customer Support
-    - Banking Information
-    - Account Assistance
-    - Financial Guidance
+Provide helpful, accurate, and professional responses to all banking-related inquiries. 
+If a question is outside banking scope, politely redirect the conversation back to banking topics."""
+        
+        # Call Mistral API with conversation history
+        response = client.chat.complete(
+            model="mistral-large-latest",
+            messages=[
+                {"role": "system", "content": system_message},
+                *st.session_state.messages
+            ],
+            max_tokens=1024,
+            temperature=0.7
+        )
+        
+        # Extract assistant response
+        assistant_message = response.choices[0].message.content
+        
+        # Add assistant message to history
+        st.session_state.messages.append({"role": "assistant", "content": assistant_message})
+        
+        # Display assistant response
+        with st.chat_message("assistant"):
+            st.write(assistant_message)
     
-    **Note:** For real account transactions or sensitive operations, 
-    please contact your bank directly.
-    """)
-    
-    if st.button("Clear Chat History"):
-        st.session_state.messages = []
-        st.rerun()
-    
-    st.markdown("---")
-    st.markdown("#### 💡 Sample Questions")
-    st.markdown("""
-    - What's a good savings strategy?
-    - How do I transfer money?
-    - What are your loan options?
-    - What fees do you charge?
-    - How do I improve my credit score?
-    """)
+    except Exception as e:
+        st.error(f"Error communicating with Mistral API: {str(e)}")
+
+# Sidebar with additional information
+st.sidebar.title("About")
+st.sidebar.write("""
+**Banking Bot v1.0**
+
+Powered by Mistral AI's Large Language Model using the Mistral API.
+
+This bot can assist with:
+- General banking inquiries
+- Account information
+- Transaction queries
+- Loan information
+- Credit card services
+- Financial advice
+""")
+
+# Footer
+st.sidebar.markdown("---")
+st.sidebar.caption("© 2026 Banking Bot - Powered by Mistral AI")
